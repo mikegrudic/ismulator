@@ -2,11 +2,13 @@
 from ism_eqm_temp import equilibrium_temp
 import numpy as np
 from matplotlib import pyplot as plt
+from time import time
 
 def n_vs_T_plot():
     n = np.logspace(1,13,100)
     NH = 1e21 * (n/1e2)**0.3
-    T = equilibrium_temp(n,NH,jeans_shielding=0.5, compression=True)
+    t=  time()
+    T = equilibrium_temp(n,NH,jeans_shielding=0.25, compression=True)    
 
     fig, ax = plt.subplots(figsize=(6,3))
     ax.plot(n,T)
@@ -45,7 +47,8 @@ def n_vs_T_plot():
     #     ax.text(n0,np.interp(n0,ngrid,T_P)*0.24,label,fontsize=4,rotation=-47)
 
     ax.set(xlim=[1,1e13],ylim=[3,1e4],xlabel=r"$n_{\rm H}\,\rm \left(cm^{-3}\right)$",ylabel=r"$T\,\left(\rm K\right)$",xscale='log',yscale='log')
-    ax.legend(fontsize=8,labelspacing=0.1,loc=1,frameon=True)
+    ax.grid(which='major',alpha=0.3)
+    #ax.legend(fontsize=8,labelspacing=0.1,loc=1,frameon=True)
     #plt.savefig("nH_vs_T.pdf",bbox_inches='tight')
     plt.show()
 
@@ -54,3 +57,4 @@ def main():
 
 if __name__=="__main__":
     main()
+    
