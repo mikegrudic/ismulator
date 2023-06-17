@@ -7,7 +7,7 @@ from ism_eqm_temp import *
 
 #session_initial_state = SessionState.get()
 
-NH2 = 10**st.sidebar.slider(r'Column density: $\log N_{\rm H}/\rm cm^{-2}$ at $\left(n_{\rm H}=100\,\rm cm^{-3}\right)$',min_value=19.,max_value=23., value=21.)
+NH2 = 10**st.sidebar.slider(r'Column density: $\log N_{\rm H}/\rm cm^{-2}$ at $n_{\rm H}=100\,\rm cm^{-3}$',min_value=19.,max_value=23., value=21.)
 Z = 10**st.sidebar.slider(r'Metallicity: $\log Z$',min_value=-4.,max_value=1., value=0.)
 z = st.sidebar.slider(r'Redshift: $z$',min_value=0.,max_value=20., value=0.)
 zeta_CR = 10**st.sidebar.slider(r'$\log \zeta_{\rm CR}$: Cosmic ray ionization rate ($s^{-1}$)',min_value=-18.,max_value=-10., value=-15.7)
@@ -25,7 +25,7 @@ CI_Rx = st.sidebar.selectbox("Atomic cooling prescription", ["Hopkins 2022 (FIRE
     #session_state = session_initial_state
 
 n = np.logspace(0,13,100)
-NH = NH2 * (n/1e2)**0.3
+NH = NH2 * (n/1e2)**NH_alpha
 T, Tdust = equilibrium_temp(n,NH,jeans_shielding=fJ, compression=compression,Z=Z,z=z,ISRF=ISRF,zeta_CR=zeta_CR,
 attenuate_cr=attenuate_cr,return_Tdust=True,dust_beta=dust_beta,co_prescription=CO_Rx,cii_prescription=CI_Rx)
 fig,ax = plt.subplots()
