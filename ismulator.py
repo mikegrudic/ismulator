@@ -42,6 +42,7 @@ else:
     ax.loglog(n,Tdust,label="Dust",color='black',ls='dashed')
     ax.legend(loc=1)
     ax.set(xlim=[nmin,nmax],ylim=[Tmin,Tmax],xlabel=r"$n_{\rm H}\,\left(\rm cm^{-3}\right)$",ylabel=r"$T\left(\rm K\right)$")
-st.pyplot(fig)
+#st.pyplot(fig)
+st.write(T)
 
     
