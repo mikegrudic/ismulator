@@ -91,8 +91,12 @@ Tmax = 10**st.sidebar.number_input(r"Max. $\log T\left(\rm K\right)$",min_value=
 n = np.logspace(np.log10(nmin),np.log10(nmax),100)
 NH = NH2 * (n/1e2)**NH_alpha
 
-T, Tdust = equilibrium_temp(n,NH,jeans_shielding=fJ, compression=compression,Z=Z,z=z,ISRF=ISRF,zeta_CR=zeta_CR, \
-attenuate_cr=attenuate_cr,return_Tdust=True,dust_beta=dust_beta,co_prescription=CO_Rx,cii_prescription=CI_Rx,processes=processes_to_use)
+try:
+    T, Tdust = equilibrium_temp(n,NH,jeans_shielding=fJ, compression=compression,Z=Z,z=z,ISRF=ISRF,zeta_CR=zeta_CR,                                                        
+    attenuate_cr=attenuate_cr,return_Tdust=True,dust_beta=dust_beta,co_prescription=CO_Rx,cii_prescription=CI_Rx,processes=processes_to_use)
+except:
+    st.write("Couldn't solve for temperature!")
+    T=Tdust=np.zeros_like(n)
 
 #fig = make_plot_matplotlib(n,T,Tdust)
 #st.session_state
