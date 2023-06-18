@@ -109,9 +109,6 @@ def CO_cooling(nH=1, T=10, NH=0,Z=1,ISRF=1,divv=None,xCO=None,simple=False,presc
         if simple: return np.min([lambda_CO_LO, lambda_CO_HI],axis=0)
         else: return (lambda_CO_LO**(-1/beta) + lambda_CO_HI**(-1/beta))**(-beta)
 
-#def H2_dissociation_cooling(nH,T):
-    #return 1e-19 
-
 def CR_heating(zeta_CR=2e-16,NH=None):
     if NH is not None:
         return 3e-27 * (zeta_CR / 2e-16)/(1+(NH/1e22))
