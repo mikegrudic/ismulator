@@ -167,15 +167,15 @@ compression=False,dust_beta=2.,attenuate_cr=True,return_Tdust=True,co_prescripti
     if NH==0: NH=1e18
     params = nH, ISRF, NH, Z, z, divv, zeta_CR, Tdust, jeans_shielding,compression, dust_beta, attenuate_cr, co_prescription, cii_prescription
     func = lambda logT: net_heating(10**logT, *params)/1e-30 # solving vs logT converges a bit faster
-#    if not T_guess:
-    #print(nH)
+
     try:
         T = 10**brentq(func, -1,5,rtol=1e-3,maxiter=500)
     except:
-        T = 10**brentq(func, -1,10,rtol=1e-3,maxiter=500)
-    # else:
-    #     logT1 = np.log10(T_guess)
-    #     logT2 = np.log10(T_guess*1.1)
+        try:
+            T = 10**brentq(func, -1,10,rtol=1e-3,maxiter=500)
+        except:
+            raise("Couldn't solve for temperature! Try some other parameters.")
+
     if return_Tdust:
         Tdust = dust_temperature(nH,T,Z,NH,ISRF,z,dust_beta)
         return T, Tdust

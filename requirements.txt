@@ -2,3 +2,4 @@ numpy<=1.24
 matplotlib
 scipy
 numba
+mpld3
