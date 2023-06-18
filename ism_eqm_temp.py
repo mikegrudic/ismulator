@@ -16,6 +16,27 @@ def f_CO(nH=1, NH=1e21, T=10,ISRF=1, Z=1):
     x = (nH/(G0*340))**2*T**-0.5
     return x/(1+x)
 
+def f_H2(nH=1, NH=1e21, T=10, ISRF=1, Z=1):
+    
+    # double surface_density_Msun_pc2_infty = 0.05 * evaluate_NH_from_GradRho(P[i].GradRho,PPP[i].Hsml,SphP[i].Density,PPP[i].NumNgb,1,i) * UNIT_SURFDEN_IN_CGS / 0.000208854; // approximate column density with Sobolev or Treecol methods as appropriate; converts to M_solar/pc^2
+    # /* 0.05 above is in testing, based on calculations by Laura Keating: represents a plausible re-scaling of the shielding length for sub-grid clumping */
+    # double surface_density_Msun_pc2_local = SphP[i].Density * Get_Particle_Size(i) * All.cf_a2inv * UNIT_SURFDEN_IN_CGS / 0.000208854; // this is -just- the depth through the local cell/slab. that's closer to what we want here, since G0 is -already- attenuated in the pre-processing step!
+    # double surface_density_Msun_pc2 = DMIN( surface_density_Msun_pc2_local, surface_density_Msun_pc2_infty);
+    # //double surface_density_Msun_pc2 = surface_density_Msun_pc2_local;
+    # /* now actually do the relevant calculation with the KMT fitting functions */
+    # double clumping_factor_for_unresolved_densities = 1; // Gnedin et al. add a large clumping factor to account for inability to resolve high-densities, here go with what is resolved
+    # double chi = 0.766 * (1. + 3.1*pow(Z_Zsol, 0.365)); // KMT estimate of chi, useful if we do -not- know anything about actual radiation field
+    # if(urad_G0 >= 0) {chi = 71. * urad_G0 / (clumping_factor_for_unresolved_densities * nH_cgs);} // their actual fiducial value including radiation information
+    # double psi = chi * (1.+0.4*chi)/(1.+1.08731*chi); // slightly-transformed chi variable
+    # double s = (Z_Zsol + 1.e-3) * surface_density_Msun_pc2 / (MIN_REAL_NUMBER + psi); // key variable controlling shielding in the KMT approximaton
+    # double q = s * (125. + s) / (11. * (96. + s)); // convert to more useful form from their Eq. 37
+    # double fH2 = 1. - pow(1.+q*q*q , -1./3.); // full KMT expression [unlike log-approximation, this extrapolates physically at low-q]
+    # if(q<0.2) {fH2 = q*q*q * (1. - 2.*q*q*q/3.)/3.;} // catch low-q limit more accurately [prevent roundoff error problems]
+    # if(q>10.) {fH2 = 1. - 1./q;} // catch high-q limit more accurately [prevent roundoff error problems]
+    # fH2 = DMIN(1,DMAX(0, fH2)); // multiple by neutral fraction, as this is ultimately the fraction of the -neutral- gas in H2
+    return fH2
+
+
 def CII_cooling(nH=1, Z=1, T=10, NH=1e21, ISRF=1,prescription="Simple"):
     if prescription=="Hopkins 2022 (FIRE-3)":
         return atomic_cooling_fire3(nH,NH,T,Z,ISRF)

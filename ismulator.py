@@ -3,26 +3,21 @@ import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
 from ism_eqm_temp import *
-import base64
-import mpld3
-import streamlit.components.v1 as components
-from time import sleep
+from PIL import Image
 
-#plt.style.use('dark_background')
+
 def make_plot(n,T):
     fig,ax = plt.subplots()
     if jeans_mass:
         MJ = 5 * (T/10)**1.5 * (n/1e4)**-0.5
         ax.loglog(n,MJ,color='black')
-        ax.set(xlim=[1,1e16],ylim=[1e-4,1e4],xlabel=r"$n_{\rm H}\,\left(\rm cm^{-3}\right)$",ylabel=r"$M_{\rm J}\left(M_\odot\right)$")
+        ax.set(xlim=[nmin,nmax],ylim=[1e-4,1e6],xlabel=r"$n_{\rm H}\,\left(\rm cm^{-3}\right)$",ylabel=r"$M_{\rm J}\left(M_\odot\right)$")
     else:
         ax.loglog(n,T,label="Gas",color='black')
         ax.loglog(n,Tdust,label="Dust",color='black',ls='dashed')
         ax.legend(loc=1)
         ax.set(xlim=[nmin,nmax],ylim=[Tmin,Tmax],xlabel=r"$n_{\rm H}\,\left(\rm cm^{-3}\right)$",ylabel=r"$T\left(\rm K\right)$")
-    plt.savefig("fig.png",dpi=400)
-
-
+    plt.savefig("fig.png",dpi=400,bbox_inches='tight')
 
 st.set_page_config(page_title="ISMulator")
 
@@ -56,5 +51,4 @@ attenuate_cr=attenuate_cr,return_Tdust=True,dust_beta=dust_beta,co_prescription=
 make_plot(n,T)
 
     
-from PIL import Image
 st.image(Image.open("fig.png"))
