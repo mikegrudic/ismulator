@@ -16,28 +16,41 @@ def f_CO(nH=1, NH=1e21, T=10,ISRF=1, Z=1):
     x = (nH/(G0*340))**2*T**-0.5
     return x/(1+x)
 
-def f_H2(nH=1, NH=1e21, T=10, ISRF=1, Z=1):
-    
-    # double surface_density_Msun_pc2_infty = 0.05 * evaluate_NH_from_GradRho(P[i].GradRho,PPP[i].Hsml,SphP[i].Density,PPP[i].NumNgb,1,i) * UNIT_SURFDEN_IN_CGS / 0.000208854; // approximate column density with Sobolev or Treecol methods as appropriate; converts to M_solar/pc^2
-    # /* 0.05 above is in testing, based on calculations by Laura Keating: represents a plausible re-scaling of the shielding length for sub-grid clumping */
-    # double surface_density_Msun_pc2_local = SphP[i].Density * Get_Particle_Size(i) * All.cf_a2inv * UNIT_SURFDEN_IN_CGS / 0.000208854; // this is -just- the depth through the local cell/slab. that's closer to what we want here, since G0 is -already- attenuated in the pre-processing step!
-    # double surface_density_Msun_pc2 = DMIN( surface_density_Msun_pc2_local, surface_density_Msun_pc2_infty);
-    # //double surface_density_Msun_pc2 = surface_density_Msun_pc2_local;
-    # /* now actually do the relevant calculation with the KMT fitting functions */
-    # double clumping_factor_for_unresolved_densities = 1; // Gnedin et al. add a large clumping factor to account for inability to resolve high-densities, here go with what is resolved
-    # double chi = 0.766 * (1. + 3.1*pow(Z_Zsol, 0.365)); // KMT estimate of chi, useful if we do -not- know anything about actual radiation field
-    # if(urad_G0 >= 0) {chi = 71. * urad_G0 / (clumping_factor_for_unresolved_densities * nH_cgs);} // their actual fiducial value including radiation information
-    # double psi = chi * (1.+0.4*chi)/(1.+1.08731*chi); // slightly-transformed chi variable
-    # double s = (Z_Zsol + 1.e-3) * surface_density_Msun_pc2 / (MIN_REAL_NUMBER + psi); // key variable controlling shielding in the KMT approximaton
-    # double q = s * (125. + s) / (11. * (96. + s)); // convert to more useful form from their Eq. 37
-    # double fH2 = 1. - pow(1.+q*q*q , -1./3.); // full KMT expression [unlike log-approximation, this extrapolates physically at low-q]
-    # if(q<0.2) {fH2 = q*q*q * (1. - 2.*q*q*q/3.)/3.;} // catch low-q limit more accurately [prevent roundoff error problems]
-    # if(q>10.) {fH2 = 1. - 1./q;} // catch high-q limit more accurately [prevent roundoff error problems]
-    # fH2 = DMIN(1,DMAX(0, fH2)); // multiple by neutral fraction, as this is ultimately the fraction of the -neutral- gas in H2
+def f_H2(nH=1, NH=1e21, ISRF=1, Z=1):
+    """Krumholz McKee Tumlinson 2008 prescription for fraction of neutral H in molecules"""
+    surface_density_Msun_pc2 = NH * 1.1e-20  
+    tau_UV = np.exp(1e-21 * Z * NH)
+    G0 = 1.7 * ISRF * np.exp(-tau_UV)
+    chi = 71. * ISRF / nH
+    psi = chi * (1.+0.4*chi)/(1.+1.08731*chi)
+    s = (Z + 1.e-3) * surface_density_Msun_pc2 / (1e-100 + psi)
+    q = s * (125. + s) / (11. * (96. + s))
+    fH2 = 1. - (1.+q*q*q)**(-1./3.)
+    if q < 0.2: fH2 = q*q*q * (1. - 2.*q*q*q/3.)/3.
+    elif q>10: fH2 = 1. - 1/q
     return fH2
 
+def H2_cooling(nH,NH,T,ISRF,Z):
+    f_molec = 0.5 * f_H2(nH,NH,ISRF,Z)
+    EXPmax = 90
+    logT = np.log10(T)
+    T3 = T/1000
+    Lambda_H2_thick = (6.7e-19*np.exp(-min(5.86/T3,EXPmax)) + 1.6e-18*np.exp(-min(11.7/T3,EXPmax)) + 3.e-24*np.exp(-min(0.51/T3,EXPmax)) + 9.5e-22*pow(T3,3.76)*np.exp(-min(0.0022/(T3*T3*T3),EXPmax))/(1.+0.12*pow(T3,2.1))) / nH; #  super-critical H2-H cooling rate [per H2 molecule]
+    Lambda_HD_thin = ((1.555e-25 + 1.272e-26*pow(T,0.77))*np.exp(-min(128./T,EXPmax)) + (2.406e-25 + 1.232e-26*pow(T,0.92))*np.exp(-min(255./T,EXPmax))) * np.exp(-min(T3*T3/25.,EXPmax)); #  optically-thin HD cooling rate [assuming all D locked into HD at temperatures where this is relevant], per molecule
+    
+    q = logT - 3.; Y_Hefrac=0.25; X_Hfrac=0.75; #  variable used below
+    Lambda_H2_thin = max(nH-2.*f_molec,0) * X_Hfrac * pow(10., max(-103. + 97.59*logT - 48.05*logT*logT + 10.8*logT*logT*logT - 0.9032*logT*logT*logT*logT , -50.)); #  sub-critical H2 cooling rate from H2-H collisions [per H2 molecule]; this from Galli & Palla 1998
+    Lambda_H2_thin += Y_Hefrac * pow(10., max(-23.6892 + 2.18924*q -0.815204*q*q + 0.290363*q*q*q -0.165962*q*q*q*q + 0.191914*q*q*q*q*q, -50.)); #  H2-He; often more efficient than H2-H at very low temperatures (<100 K); this and other H2-x terms below from Glover & Abel 2008
+    Lambda_H2_thin += f_molec * X_Hfrac * pow(10., max(-23.9621 + 2.09434*q -0.771514*q*q + 0.436934*q*q*q -0.149132*q*q*q*q -0.0336383*q*q*q*q*q, -50.)); #  H2-H2; can be more efficient than H2-H when H2 fraction is order-unity
+    
+    f_HD = min(0.00126*f_molec , 4.0e-5*nH)
 
-def CII_cooling(nH=1, Z=1, T=10, NH=1e21, ISRF=1,prescription="Simple"):
+    nH_over_ncrit = Lambda_H2_thin / Lambda_H2_thick
+    Lambda_HD = f_HD * Lambda_HD_thin / (1. + f_HD/(f_molec+1e-10)*nH_over_ncrit) * nH 
+    Lambda_H2 = f_molec * Lambda_H2_thin / (1. + nH_over_ncrit) * nH
+    return Lambda_H2 + Lambda_HD
+
+def CII_cooling(nH=1, Z=1, T=10, NH=1e21, ISRF=1,prescription="Simple"):    
     if prescription=="Hopkins 2022 (FIRE-3)":
         return atomic_cooling_fire3(nH,NH,T,Z,ISRF)
     T_CII = 91
@@ -168,25 +181,39 @@ def dust_absorption_rate(NH,Z=1,ISRF=1,z=0, beta=2):
     gamma_IR =  2.268 * sigma_IR_CMB * (T_CMB/10)**4 + 0.048 * (ISRF_IR_eV_cm3 + ISRF_OPT_eV_cm3 * (1-np.exp(-tau_OPT))) * sigma_IR_ISRF
     return gamma_IR + gamma_UV + gamma_OPT
 
+all_processes = "CR Heating", "Lyman cooling", "Photoelectric", "CII Cooling", "CO Cooling", "Dust-Gas Coupling", "Grav. Compression", "H_2 Cooling", "Turb. Dissipation"
+
 def net_heating(T=10, nH=1, ISRF=1, NH=0, Z=1, z=0, divv=None, zeta_CR=2e-16, Tdust=None,jeans_shielding=False, 
-compression=0,dust_beta=2.,attenuate_cr=True,co_prescription="Whitworth 2018",cii_prescription="Hopkins 2022 (FIRE-3)"):
+compression=0,dust_beta=2.,processes=all_processes, attenuate_cr=True,co_prescription="Whitworth 2018",cii_prescription="Hopkins 2022 (FIRE-3)"):
     if jeans_shielding:
         lambda_jeans = 8.1e19 * nH**-0.5 * (T/10)**0.5
         NH = np.max([nH*lambda_jeans*jeans_shielding, NH],axis=0)
     if Tdust==None:
         Tdust = dust_temperature(nH,T,Z,NH,ISRF,z,dust_beta)
-    rate = CR_heating(zeta_CR,NH*attenuate_cr) - lyman_cooling(nH,T) \
-    + photoelectric_heating(ISRF, nH,T, NH, Z) - CII_cooling(nH, Z, T, NH, ISRF,prescription=cii_prescription) \
-    - CO_cooling(nH,T,NH,Z,ISRF,divv,prescription=co_prescription)  \
-    + dust_gas_cooling(nH,T,Tdust,Z) + compression*compression_heating(nH,T) #+ turbulent_heating()
+
+    rate = 0
+    for process in processes:
+        if process == "CR Heating": rate += CR_heating(zeta_CR,NH*attenuate_cr)
+        if process == "Lyman cooling": rate -= lyman_cooling(nH,T)
+        if process == "Photoelectric": rate += photoelectric_heating(ISRF, nH,T, NH, Z)
+        if process == "CII Cooling": rate -= CII_cooling(nH, Z, T, NH, ISRF,prescription=cii_prescription)
+        if process == "CO Cooling": rate -= CO_cooling(nH,T,NH,Z,ISRF,divv,prescription=co_prescription)
+        if process == "Dust-Gas Coupling": rate += dust_gas_cooling(nH,T,Tdust,Z)
+        if process == "H_2 Cooling": rate -= H2_cooling(nH,NH,T,ISRF,Z)
+        if process == "Grav. Compression": rate += compression*compression_heating(nH,T)
+        if process == "Turb. Dissipation": rate += turbulent_heating()
+            
+    # rate = CR_heating(zeta_CR,NH*attenuate_cr) - lyman_cooling(nH,T) \
+    # + photoelectric_heating(ISRF, nH,T, NH, Z) - CII_cooling(nH, Z, T, NH, ISRF,prescription=cii_prescription) \
+    # - CO_cooling(nH,T,NH,Z,ISRF,divv,prescription=co_prescription)  \
+    # + dust_gas_cooling(nH,T,Tdust,Z) + compression*compression_heating(nH,T)  \
+    # - H2_cooling(nH,NH,T,ISRF,Z)
     return rate
 
-#net_heating = np.vectorize(net_heating)
-
 def equilibrium_temp(nH=1, NH=0, ISRF=1, Z=1, z=0, divv=None, zeta_CR=2e-16, Tdust=None,jeans_shielding=False,
-compression=False,dust_beta=2.,attenuate_cr=True,return_Tdust=True,co_prescription="Whitworth 2018",cii_prescription="Hopkins 2022 (FIRE-3)",T_guess=None):
+compression=False,dust_beta=2.,processes=all_processes,attenuate_cr=True,return_Tdust=True,co_prescription="Whitworth 2018",cii_prescription="Hopkins 2022 (FIRE-3)"):
     if NH==0: NH=1e18
-    params = nH, ISRF, NH, Z, z, divv, zeta_CR, Tdust, jeans_shielding,compression, dust_beta, attenuate_cr, co_prescription, cii_prescription
+    params = nH, ISRF, NH, Z, z, divv, zeta_CR, Tdust, jeans_shielding,compression, dust_beta, processes, attenuate_cr, co_prescription, cii_prescription
     func = lambda logT: net_heating(10**logT, *params)/1e-30 # solving vs logT converges a bit faster
 
     try:
@@ -203,4 +230,4 @@ compression=False,dust_beta=2.,attenuate_cr=True,return_Tdust=True,co_prescripti
     else:
         return T
 
-equilibrium_temp = np.vectorize(equilibrium_temp)
+equilibrium_temp = np.vectorize(equilibrium_temp,excluded=["processes"])

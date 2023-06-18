@@ -1,4 +1,5 @@
 numpy<=1.24
-matplotlib
+#matplotlib
+bokeh<=2.4.3
 scipy
 numba
