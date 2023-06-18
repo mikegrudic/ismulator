@@ -105,5 +105,6 @@ except:
 #st.pyplot(fig,clear_figure=True)
 #st.plotly_chart(make_plot_plotly(n,T,Tdust))
 col1.bokeh_chart(make_plot_bokeh(n,T,Tdust),use_container_width=True)
-#sleep(0.5)
-#print(list(st.session_state.keys()))
+"ISMulator solves for the equilibrium of gas and dust heating and cooling in interstellar clouds as a function of density."
+"Warning: results at >1000K are VERY approximate because I didn't feel like solving for ionization 🙃."
+"Source code available at https://github.com/mikegrudic/ISMulator"
