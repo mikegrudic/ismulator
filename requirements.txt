@@ -1,4 +1,4 @@
-numpy <=1.24, >=1.21
+numpy==1.24
 numba
 bokeh<=2.4.3
 scipy
