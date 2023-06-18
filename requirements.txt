@@ -1,5 +1,5 @@
-numpy<=1.24
+numba
+numpy <1.25, >=1.21
 #matplotlib
 bokeh<=2.4.3
 scipy
-numba
