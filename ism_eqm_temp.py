@@ -4,6 +4,11 @@ from numba import njit
 import numpy as np
 
 def photoelectric_heating(ISRF=1, nH=1, T=10, NH=0, Z=1):
+    """
+    Rate of photoelectric heating per H nucleus in erg/s.
+    Weingartner & Draine 2001 prescription
+    Grain charge parameter is a highly approximate fit vs. density - otherwise need to solve ionization.
+    """
     grain_charge =  max((5e3/nH),50)
     c0=5.22; c1 =2.25; c2=0.04996; c3=0.0043; c4=0.147; c5=0.431; c6=0.692
     eps_PE = (c0+c1*T**c4)/(1+c2*grain_charge**c5 * (1+c5*grain_charge**c6))
@@ -11,13 +16,14 @@ def photoelectric_heating(ISRF=1, nH=1, T=10, NH=0, Z=1):
     return 1e-26 * ISRF * eps_PE * np.exp(-NH*sigma_FUV) * Z
 
 def f_CO(nH=1, NH=1e21, T=10,ISRF=1, Z=1):
+    """Equilibrium fraction of C locked in CO, from Tielens 2005"""
     G0 = 1.7 * ISRF * np.exp(-1e-21 * NH * Z)
     if nH > 10000*G0*340: return 1.
     x = (nH/(G0*340))**2*T**-0.5
     return x/(1+x)
 
 def f_H2(nH=1, NH=1e21, ISRF=1, Z=1):
-    """Krumholz McKee Tumlinson 2008 prescription for fraction of neutral H in molecules"""
+    """Krumholz McKee Tumlinson 2008 prescription for fraction of neutral H in H_2 molecules"""
     surface_density_Msun_pc2 = NH * 1.1e-20  
     tau_UV = np.exp(1e-21 * Z * NH)
     G0 = 1.7 * ISRF * np.exp(-tau_UV)
@@ -31,6 +37,10 @@ def f_H2(nH=1, NH=1e21, ISRF=1, Z=1):
     return fH2
 
 def H2_cooling(nH,NH,T,ISRF,Z):
+    """
+    Glover & Abel 2008 prescription for H_2 cooling; accounts for H2-H2 and H2-HD collisions.
+    Rate per H nucleus in erg/s.
+    """
     f_molec = 0.5 * f_H2(nH,NH,ISRF,Z)
     EXPmax = 90
     logT = np.log10(T)
@@ -51,6 +61,7 @@ def H2_cooling(nH,NH,T,ISRF,Z):
     return Lambda_H2 + Lambda_HD
 
 def CII_cooling(nH=1, Z=1, T=10, NH=1e21, ISRF=1,prescription="Simple"):    
+    """Cooling due to atomic and/or ionized C. Uses either Hopkins 2022 FIRE-3 or simple prescription. Rate per H nucleus in erg/s."""
     if prescription=="Hopkins 2022 (FIRE-3)":
         return atomic_cooling_fire3(nH,NH,T,Z,ISRF)
     T_CII = 91
@@ -59,13 +70,16 @@ def CII_cooling(nH=1, Z=1, T=10, NH=1e21, ISRF=1,prescription="Simple"):
     return 8e-10 * 1.256e-14 * xc * np.exp(-T_CII/T) * Z * nH * f_C
 
 def lyman_cooling(nH=1,T=1000):
+    """Rate of Lyman-alpha cooling from Koyama & Inutsuka 2002 per H nucleus in erg/s. Actually a hard upper bound assuming xe ~ xH ~ xH+ ~ 1/2, see Micic 2013 for discussion."""
     return 2e-19 * np.exp(-1.184e5/T) * nH
 
 def atomic_cooling_fire3(nH,NH,T,Z,ISRF):
+    """Cooling due to atomic and ionized C. Uses Hopkins 2022 FIRE-3 prescription. Rate per H nucleus in erg/s."""
     f = f_CO(nH,NH,T,ISRF,Z)
     return 1e-27 * (0.47*T**0.15 * np.exp(-91/T) + 0.0208 * np.exp(-23.6/T)) * (1-f) * nH * Z
 
 def get_tabulated_CO_coolingrate(T,NH,nH2):
+    """Tabulated CO cooling rate from Omukai 2010, used for Gong 2017 implementation of CO cooling."""
     logT = np.log10(T)
     logNH = np.log10(NH)
     table = np.loadtxt("coolingtables/omukai_2010_CO_cooling_alpha_table.dat")
@@ -82,6 +96,14 @@ def get_tabulated_CO_coolingrate(T,NH,nH2):
     return LM
 
 def CO_cooling(nH=1, T=10, NH=0,Z=1,ISRF=1,divv=None,xCO=None,simple=False,prescription='Whitworth 2018'):
+    """
+    Rate of CO cooling per H nucleus in erg/s.
+
+    Three prescriptions are implemented: Gong 2017, Whitworth 2018, and Hopkins 2022 (FIRE-3).
+
+    Prescriptions that require a velocity gradient will assume a standard ISM size-linewidth relation by default, 
+    unless div v is provided.
+    """
     fmol = f_CO(nH,NH,T,ISRF,Z)
     pc_to_cm = 3.08567758128E+18
     if xCO is None:
@@ -110,6 +132,7 @@ def CO_cooling(nH=1, T=10, NH=0,Z=1,ISRF=1,divv=None,xCO=None,simple=False,presc
         else: return (lambda_CO_LO**(-1/beta) + lambda_CO_HI**(-1/beta))**(-beta)
 
 def CR_heating(zeta_CR=2e-16,NH=None):
+    """Rate of cosmic ray heating in erg/s/H, just assuming 10eV per H ionization."""
     if NH is not None:
         return 3e-27 * (zeta_CR / 2e-16)/(1+(NH/1e22))
     else:
@@ -117,20 +140,35 @@ def CR_heating(zeta_CR=2e-16,NH=None):
     
 @njit(fastmath=True,error_model='numpy')
 def gas_dust_heating_coeff(T,Z):
+    """Coefficient alpha such that the gas-dust heat transfer is alpha * (T-T_dust)
+    
+    Uses Hollenbach & McKee 1979 prescription, assuming 10 Angstrom min grain size.
+    """
     return 1.1e-32 * Z * np.sqrt(T) * (1-0.8*np.exp(-75/T))
 
 @njit(fastmath=True,error_model='numpy')
 def dust_gas_cooling(nH=1,T=10,Tdust=20,Z=1):
+    """
+    Rate of heat transfer from gas to dust in erg/s per H
+    """
     return nH * gas_dust_heating_coeff(T,Z) * (Tdust-T)  #3e-26 * Z * (T/10)**0.5 * (Tdust-T)/10 * (nH/1e6)
 
 def compression_heating(nH=1,T=10):
+    """Rate of compressional heating per H in erg/s, assuming freefall collapse (e.g. Masunaga 1998)"""
     return 1.2e-27 * np.sqrt(nH/1e6) * (T/10) # ceiling here to get reasonable results in diffuse ISM
-        #return 0.
 
 def turbulent_heating(sigma_GMC=100., M_GMC=1e5):
+    """
+    Rate of tubulent dissipation per H in erg/s, assuming a turbulent GMC with virial parameter=1 of a certain surface density and mass.
+    
+    Note that much of the cooling can take place in shocks that are way out of equilibrium, so this doesn't necessarily capture the full effect.
+    """
     return 5e-27 * (M_GMC/1e6)**0.25 * (sigma_GMC/100)**(1.25)
 
 def dust_temperature(nH=1,T=10,Z=1,NH=0, ISRF=1, z=0,beta=2):
+    """
+    Equilibrium dust temperature obtained by solving the dust energy balance equation accounting for absorption, emission, and gas-dust heat transfer.    
+    """
     abs = dust_absorption_rate(NH,Z,ISRF,z, beta)
     sigma_IR_0 = 2e-25
     Tdust_guess = 10*(abs / (sigma_IR_0 * Z * 2.268))**(1./(4+beta))
@@ -148,6 +186,7 @@ def dust_temperature(nH=1,T=10,Z=1,NH=0, ISRF=1, z=0,beta=2):
 
 @njit(fastmath=True,error_model='numpy')
 def net_dust_heating(dT,nH,T,NH,Z=1,ISRF=1,z=0, beta=2, absorption=-1):
+    """Derivative of the dust energy in the dust energy equation, solve this = 0 to get the equilibrium dust temperature."""
     Td = T + dT
     sigma_IR_0 = 2e-25
     sigma_IR_emission = sigma_IR_0 * Z * (min(Td,150)/10)**beta # dust cross section per H in cm^2
@@ -162,6 +201,7 @@ def net_dust_heating(dT,nH,T,NH,Z=1,ISRF=1,z=0, beta=2, absorption=-1):
 
 @njit(fastmath=True,error_model='numpy')
 def dust_absorption_rate(NH,Z=1,ISRF=1,z=0, beta=2):
+    """Rate of radiative absorption by dust, per H nucleus in erg/s."""
     T_CMB = 2.73*(1+z)
     ISRF_OPT_eV_cm3 = ISRF * 0.54
     ISRF_IR_eV_cm3 = ISRF * 0.39
@@ -203,11 +243,6 @@ compression=0,dust_beta=2.,sigma_GMC=100, processes=all_processes, attenuate_cr=
         if process == "Grav. Compression": rate += compression*compression_heating(nH,T)
         if process == "Turb. Dissipation": rate += turbulent_heating(sigma_GMC=sigma_GMC)
             
-    # rate = CR_heating(zeta_CR,NH*attenuate_cr) - lyman_cooling(nH,T) \
-    # + photoelectric_heating(ISRF, nH,T, NH, Z) - CII_cooling(nH, Z, T, NH, ISRF,prescription=cii_prescription) \
-    # - CO_cooling(nH,T,NH,Z,ISRF,divv,prescription=co_prescription)  \
-    # + dust_gas_cooling(nH,T,Tdust,Z) + compression*compression_heating(nH,T)  \
-    # - H2_cooling(nH,NH,T,ISRF,Z)
     return rate
 
 def equilibrium_temp(nH=1, NH=0, ISRF=1, Z=1, z=0, divv=None, zeta_CR=2e-16, Tdust=None,jeans_shielding=False,
