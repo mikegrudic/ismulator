@@ -65,6 +65,7 @@ ISRF = 10**st.sidebar.slider(r'$\log \chi$: Interstellar radiation field strengt
 NH_alpha = st.sidebar.slider(r'Column density scaling: $\alpha$ where $N_{\rm H}=N_{\rm H,0}\left(n_{\rm H}/100\rm cm^{-3}\right)^{\alpha}$',min_value=0.,max_value=1., value=.3)
 fJ = st.sidebar.slider(r'$f_{\rm J}=l/\lambda_{\rm J}$: Ratio of shielding length floor to Jeans wavelength',min_value=0.,max_value=1.,value=0.25)
 dust_beta = st.sidebar.slider(r'$\beta$: Dust spectral index',min_value=1.,max_value=2.,value=2.)
+sigma_GMC = 10**st.sidebar.slider(r'$\log \Sigma_{\rm GMC}\left(M_\odot\rm pc^{-2}\right)$ for turb. dissipation',min_value=1.,max_value=5.,value=2.)
 #compression = st.checkbox(r"Gravitational collapse heating",value=True)
 attenuate_cr = col2.checkbox(r"Cosmic ray attenuation",value=True)
 jeans_mass = col2.checkbox(r"Plot Jeans mass",value=False)
@@ -84,16 +85,17 @@ nmin = 10**st.sidebar.number_input(r"Min. $\log n_{\rm H}\left(\rm cm^{-3}\right
 nmax = 10**st.sidebar.number_input(r"Max. $\log n_{\rm H}\left(\rm cm^{-3}\right)$",min_value=0., max_value=20.,value=12.)
 Tmin = 10**st.sidebar.number_input(r"Min. $\log T\left(\rm K\right)$",min_value=0., max_value=8.,value=0.)
 Tmax = 10**st.sidebar.number_input(r"Max. $\log T\left(\rm K\right)$",min_value=0., max_value=7.,value=4.)
+Ngrid = st.sidebar.number_input(r"Number of $n_{\rm H}$ grid points",min_value=10, max_value=1000,value=100)
 
 
 #switches for different cooling physics?
 
-n = np.logspace(np.log10(nmin),np.log10(nmax),100)
+n = np.logspace(np.log10(nmin),np.log10(nmax),Ngrid)
 NH = NH2 * (n/1e2)**NH_alpha
 
 try:
     T, Tdust = equilibrium_temp(n,NH,jeans_shielding=fJ, compression=compression,Z=Z,z=z,ISRF=ISRF,zeta_CR=zeta_CR,                                                        
-    attenuate_cr=attenuate_cr,return_Tdust=True,dust_beta=dust_beta,co_prescription=CO_Rx,cii_prescription=CI_Rx,processes=processes_to_use)
+    attenuate_cr=attenuate_cr,return_Tdust=True,dust_beta=dust_beta,sigma_GMC=sigma_GMC,co_prescription=CO_Rx,cii_prescription=CI_Rx,processes=processes_to_use)
 except:
     st.write("Couldn't solve for temperature!")
     T=Tdust=np.zeros_like(n)
@@ -106,5 +108,6 @@ except:
 #st.plotly_chart(make_plot_plotly(n,T,Tdust))
 col1.bokeh_chart(make_plot_bokeh(n,T,Tdust),use_container_width=True)
 "ISMulator solves for the equilibrium of gas and dust heating and cooling in interstellar clouds as a function of density."
-"Warning: results at >1000K are VERY approximate because I didn't feel like solving for ionization 🙃."
+"Warning: results at >1000K are VERY approximate because solving ionization is deferred to Future Work ™️🙃"
 "Source code available at https://github.com/mikegrudic/ISMulator"
+"Contributions welcome via pull request."

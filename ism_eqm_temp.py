@@ -184,7 +184,7 @@ def dust_absorption_rate(NH,Z=1,ISRF=1,z=0, beta=2):
 all_processes = "CR Heating", "Lyman cooling", "Photoelectric", "CII Cooling", "CO Cooling", "Dust-Gas Coupling", "Grav. Compression", "H_2 Cooling", "Turb. Dissipation"
 
 def net_heating(T=10, nH=1, ISRF=1, NH=0, Z=1, z=0, divv=None, zeta_CR=2e-16, Tdust=None,jeans_shielding=False, 
-compression=0,dust_beta=2.,processes=all_processes, attenuate_cr=True,co_prescription="Whitworth 2018",cii_prescription="Hopkins 2022 (FIRE-3)"):
+compression=0,dust_beta=2.,sigma_GMC=100, processes=all_processes, attenuate_cr=True,co_prescription="Whitworth 2018",cii_prescription="Hopkins 2022 (FIRE-3)"):
     if jeans_shielding:
         lambda_jeans = 8.1e19 * nH**-0.5 * (T/10)**0.5
         NH = np.max([nH*lambda_jeans*jeans_shielding, NH],axis=0)
@@ -201,7 +201,7 @@ compression=0,dust_beta=2.,processes=all_processes, attenuate_cr=True,co_prescri
         if process == "Dust-Gas Coupling": rate += dust_gas_cooling(nH,T,Tdust,Z)
         if process == "H_2 Cooling": rate -= H2_cooling(nH,NH,T,ISRF,Z)
         if process == "Grav. Compression": rate += compression*compression_heating(nH,T)
-        if process == "Turb. Dissipation": rate += turbulent_heating()
+        if process == "Turb. Dissipation": rate += turbulent_heating(sigma_GMC=sigma_GMC)
             
     # rate = CR_heating(zeta_CR,NH*attenuate_cr) - lyman_cooling(nH,T) \
     # + photoelectric_heating(ISRF, nH,T, NH, Z) - CII_cooling(nH, Z, T, NH, ISRF,prescription=cii_prescription) \
@@ -211,9 +211,9 @@ compression=0,dust_beta=2.,processes=all_processes, attenuate_cr=True,co_prescri
     return rate
 
 def equilibrium_temp(nH=1, NH=0, ISRF=1, Z=1, z=0, divv=None, zeta_CR=2e-16, Tdust=None,jeans_shielding=False,
-compression=False,dust_beta=2.,processes=all_processes,attenuate_cr=True,return_Tdust=True,co_prescription="Whitworth 2018",cii_prescription="Hopkins 2022 (FIRE-3)"):
+compression=False,dust_beta=2.,sigma_GMC=100., processes=all_processes,attenuate_cr=True,return_Tdust=True,co_prescription="Whitworth 2018",cii_prescription="Hopkins 2022 (FIRE-3)"):
     if NH==0: NH=1e18
-    params = nH, ISRF, NH, Z, z, divv, zeta_CR, Tdust, jeans_shielding,compression, dust_beta, processes, attenuate_cr, co_prescription, cii_prescription
+    params = nH, ISRF, NH, Z, z, divv, zeta_CR, Tdust, jeans_shielding,compression, dust_beta, sigma_GMC,processes, attenuate_cr, co_prescription, cii_prescription
     func = lambda logT: net_heating(10**logT, *params)/1e-30 # solving vs logT converges a bit faster
 
     try:
