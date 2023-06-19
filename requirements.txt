@@ -1,4 +1,4 @@
 numpy==1.24
-numba
+numba==0.57
 bokeh<=2.4.3
 scipy
