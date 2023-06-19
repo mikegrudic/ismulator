@@ -66,14 +66,12 @@ NH_alpha = st.sidebar.slider(r'Column density scaling: $\alpha$ where $N_{\rm H}
 fJ = st.sidebar.slider(r'$f_{\rm J}=l/\lambda_{\rm J}$: Ratio of shielding length floor to Jeans wavelength',min_value=0.,max_value=1.,value=0.25)
 dust_beta = st.sidebar.slider(r'$\beta$: Dust spectral index',min_value=1.,max_value=2.,value=2.)
 sigma_GMC = 10**st.sidebar.slider(r'$\log \Sigma_{\rm GMC}\left(M_\odot\rm pc^{-2}\right)$ for turb. dissipation',min_value=1.,max_value=5.,value=2.)
-#compression = st.checkbox(r"Gravitational collapse heating",value=True)
 attenuate_cr = col2.checkbox(r"Cosmic ray attenuation",value=True)
 jeans_mass = col2.checkbox(r"Plot Jeans mass",value=False)
 process_dict ={}
 for process in all_processes:
     process_dict[process] = col2.checkbox(process, value=True)
 processes_to_use = [p  if process_dict[p]  else "" for p in process_dict.keys()]
-compression = process_dict["Grav. Compression"]
 
 CO_Rx = st.sidebar.selectbox("CO cooling prescription", ["Whitworth 2018","Gong 2017","Hopkins 2022 (FIRE-3)"])
 CI_Rx = st.sidebar.selectbox("Atomic cooling prescription", ["Hopkins 2022 (FIRE-3)","Simple"])
@@ -88,24 +86,16 @@ Tmax = 10**st.sidebar.number_input(r"Max. $\log T\left(\rm K\right)$",min_value=
 Ngrid = st.sidebar.number_input(r"Number of $n_{\rm H}$ grid points",min_value=10, max_value=1000,value=100)
 
 
-#switches for different cooling physics?
-
 n = np.logspace(np.log10(nmin),np.log10(nmax),Ngrid)
 NH = NH2 * (n/1e2)**NH_alpha
 
 try:
-    T, Tdust = equilibrium_temp(n,NH,jeans_shielding=fJ, compression=compression,Z=Z,z=z,ISRF=ISRF,zeta_CR=zeta_CR,                                                        
-    attenuate_cr=attenuate_cr,return_Tdust=True,dust_beta=dust_beta,sigma_GMC=sigma_GMC,co_prescription=CO_Rx,cii_prescription=CI_Rx,processes=processes_to_use)
+    T, Tdust = equilibrium_temp_grid(n,NH,jeans_shielding=fJ, Z=Z,z=z,ISRF=ISRF,zeta_CR=zeta_CR,                                                        
+    attenuate_cr=attenuate_cr,dust_beta=dust_beta,sigma_GMC=sigma_GMC,co_prescription=CO_Rx,cii_prescription=CI_Rx,processes=processes_to_use,return_Tdust=True)
 except:
     st.write("Couldn't solve for temperature!")
     T=Tdust=np.zeros_like(n)
 
-#fig = make_plot_matplotlib(n,T,Tdust)
-#st.session_state
-
-#st.image(Image.open("fig.png"))
-#st.pyplot(fig,clear_figure=True)
-#st.plotly_chart(make_plot_plotly(n,T,Tdust))
 col1.bokeh_chart(make_plot_bokeh(n,T,Tdust),use_container_width=True)
 "ISMulator solves for the equilibrium of gas and dust heating and cooling in interstellar clouds as a function of density."
 "Warning: results at >1000K are VERY approximate because solving ionization is deferred to Future Work ™️🙃"

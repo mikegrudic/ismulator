@@ -1,5 +1,5 @@
 from scipy.optimize import brentq, newton, root_scalar
-from scipy.interpolate import interpn
+from scipy.interpolate import interpn, interp1d
 from numba import njit
 import numpy as np
 
@@ -25,7 +25,7 @@ def f_CO(nH=1, NH=1e21, T=10,ISRF=1, Z=1):
 def f_H2(nH=1, NH=1e21, ISRF=1, Z=1):
     """Krumholz McKee Tumlinson 2008 prescription for fraction of neutral H in H_2 molecules"""
     surface_density_Msun_pc2 = NH * 1.1e-20  
-    tau_UV = np.exp(1e-21 * Z * NH)
+    tau_UV = min(1e-21 * Z * NH,100.)
     G0 = 1.7 * ISRF * np.exp(-tau_UV)
     chi = 71. * ISRF / nH
     psi = chi * (1.+0.4*chi)/(1.+1.08731*chi)
@@ -116,13 +116,11 @@ def CO_cooling(nH=1, T=10, NH=0,Z=1,ISRF=1,divv=None,xCO=None,simple=False,presc
         n_H2 = fmol*nH/2
         neff = n_H2 + nH*2**0.5 * (2.3e-15/(3.3e-16*(T/1000)**-0.25)) # Eq. 34 from gong 2017, ignoring electrons 
         NCO = xCO * nH / (divv / pc_to_cm)
-       # print(xCO,NCO)
         LCO = get_tabulated_CO_coolingrate(T,NCO,neff)
         return LCO * xCO * n_H2
     elif prescription=='Hopkins 2022 (FIRE-3)':
         sigma_crit_CO=  1.3e19 * T / Z
         ncrit_CO=1.9e4 * T**0.5
-        #lambda_CO_HI = 2e-26 * divv * (nH/1e2)**-1 * (T/10)**4
         return 2.7e-31 * T**1.5 * (xCO/3e-4) * nH/(1 + (nH/ncrit_CO)*(1+NH/sigma_crit_CO)) #lambda_CO_HI)
     elif prescription=='Whitworth 2018':
         lambda_CO_LO = 5e-27 * (xCO/3e-4) * (T/10)**1.5 * (nH/1e3)
@@ -213,18 +211,17 @@ def dust_absorption_rate(NH,Z=1,ISRF=1,z=0, beta=2):
     sigma_IR_CMB = sigma_IR_0 * Z * (min(T_CMB,150)/10)**beta
     sigma_IR_ISRF = sigma_IR_0 * Z * (min(T_ISRF,150)/10)**beta
     
-    tau_UV = sigma_UV * NH
+    tau_UV = min(sigma_UV * NH,100)
     gamma_UV = ISRF * np.exp(-tau_UV) * 5.965e-25 * Z
 
-    tau_OPT = sigma_OPT * NH
+    tau_OPT = min(sigma_OPT * NH,100)
     gamma_OPT = ISRF * 7.78e-24 * np.exp(-tau_OPT) * Z
     gamma_IR =  2.268 * sigma_IR_CMB * (T_CMB/10)**4 + 0.048 * (ISRF_IR_eV_cm3 + ISRF_OPT_eV_cm3 * (1-np.exp(-tau_OPT))) * sigma_IR_ISRF
     return gamma_IR + gamma_UV + gamma_OPT
 
 all_processes = "CR Heating", "Lyman cooling", "Photoelectric", "CII Cooling", "CO Cooling", "Dust-Gas Coupling", "Grav. Compression", "H_2 Cooling", "Turb. Dissipation"
 
-def net_heating(T=10, nH=1, ISRF=1, NH=0, Z=1, z=0, divv=None, zeta_CR=2e-16, Tdust=None,jeans_shielding=False, 
-compression=0,dust_beta=2.,sigma_GMC=100, processes=all_processes, attenuate_cr=True,co_prescription="Whitworth 2018",cii_prescription="Hopkins 2022 (FIRE-3)"):
+def net_heating(T=10, nH=1, NH=0, ISRF=1,Z=1, z=0, divv=None, zeta_CR=2e-16, Tdust=None,jeans_shielding=False,dust_beta=2.,sigma_GMC=100, processes=all_processes, attenuate_cr=True,co_prescription="Whitworth 2018",cii_prescription="Hopkins 2022 (FIRE-3)"):
     if jeans_shielding:
         lambda_jeans = 8.1e19 * nH**-0.5 * (T/10)**0.5
         NH = np.max([nH*lambda_jeans*jeans_shielding, NH],axis=0)
@@ -240,24 +237,36 @@ compression=0,dust_beta=2.,sigma_GMC=100, processes=all_processes, attenuate_cr=
         if process == "CO Cooling": rate -= CO_cooling(nH,T,NH,Z,ISRF,divv,prescription=co_prescription)
         if process == "Dust-Gas Coupling": rate += dust_gas_cooling(nH,T,Tdust,Z)
         if process == "H_2 Cooling": rate -= H2_cooling(nH,NH,T,ISRF,Z)
-        if process == "Grav. Compression": rate += compression*compression_heating(nH,T)
+        if process == "Grav. Compression": rate += compression_heating(nH,T)
         if process == "Turb. Dissipation": rate += turbulent_heating(sigma_GMC=sigma_GMC)
             
     return rate
 
 def equilibrium_temp(nH=1, NH=0, ISRF=1, Z=1, z=0, divv=None, zeta_CR=2e-16, Tdust=None,jeans_shielding=False,
-compression=False,dust_beta=2.,sigma_GMC=100., processes=all_processes,attenuate_cr=True,return_Tdust=True,co_prescription="Whitworth 2018",cii_prescription="Hopkins 2022 (FIRE-3)"):
+                     dust_beta=2.,sigma_GMC=100., processes=all_processes,attenuate_cr=True,
+                     co_prescription="Whitworth 2018",cii_prescription="Hopkins 2022 (FIRE-3)",return_Tdust=True,T_guess=None):
+    
     if NH==0: NH=1e18
-    params = nH, ISRF, NH, Z, z, divv, zeta_CR, Tdust, jeans_shielding,compression, dust_beta, sigma_GMC,processes, attenuate_cr, co_prescription, cii_prescription
-    func = lambda logT: net_heating(10**logT, *params)/1e-30 # solving vs logT converges a bit faster
+    params = nH, NH, ISRF, Z, z, divv, zeta_CR, Tdust, jeans_shielding, dust_beta, sigma_GMC,processes, attenuate_cr, co_prescription, cii_prescription
 
-    try:
-        T = 10**brentq(func, -1,5,rtol=1e-3,maxiter=500)
-    except:
+    func = lambda logT: net_heating(10**logT, *params) # solving vs logT converges a bit faster
+    
+    use_brentq = True
+    if T_guess is not None: # we have an initial guess that is supposed to be close (e.g. previous grid point)
+        T_guess2 = T_guess * 1.01
+        result = root_scalar(func, x0=np.log10(T_guess),x1=np.log10(T_guess2), method='secant',rtol=1e-3) #,rtol=1e-3,xtol=1e-4*T)
+        if result.converged:
+            T = 10**result.root; use_brentq = False
+            #print(T, T_guess, result.function_calls)
+
+    if use_brentq: 
         try:
-            T = 10**brentq(func, -1,10,rtol=1e-3,maxiter=500)
+            T = 10**brentq(func, -1,5,rtol=1e-3,maxiter=500)
         except:
-            raise("Couldn't solve for temperature! Try some other parameters.")
+            try:
+                T = 10**brentq(func, -1,10,rtol=1e-3,maxiter=500)
+            except:
+                raise("Couldn't solve for temperature! Try some other parameters.")
 
     if return_Tdust:
         Tdust = dust_temperature(nH,T,Z,NH,ISRF,z,dust_beta)
@@ -265,4 +274,33 @@ compression=False,dust_beta=2.,sigma_GMC=100., processes=all_processes,attenuate
     else:
         return T
 
-equilibrium_temp = np.vectorize(equilibrium_temp,excluded=["processes"])
+#equilibrium_temp = np.vectorize(equilibrium_temp,excluded=["processes"])
+
+def equilibrium_temp_grid(nH, NH, ISRF=1, Z=1, z=0, divv=None, zeta_CR=2e-16, Tdust=None,jeans_shielding=False,
+    dust_beta=2.,sigma_GMC=100., processes=all_processes,attenuate_cr=True,return_Tdust=False,
+    co_prescription="Whitworth 2018",cii_prescription="Hopkins 2022 (FIRE-3)"):
+        
+    params = ISRF, Z, z, divv, zeta_CR, Tdust, jeans_shielding, dust_beta, sigma_GMC,processes, attenuate_cr, co_prescription, cii_prescription
+    Ts = []
+    Tds = []
+
+    T_guess = None
+    for i in range(len(nH)): # we do a pass on the grid where we use previously-evaluated temperatures to get good initial guesses for the next grid point
+        if i==1:
+            T_guess = Ts[-1]
+        elif i>1:
+            T_guess = 10**interp1d(np.log10(nH[:i]),np.log10(Ts),fill_value="extrapolate")(np.log10(nH[i])) # guess using linear extrapolation in log space
+
+        sol = equilibrium_temp(nH[i],NH[i],*params,return_Tdust=return_Tdust,T_guess=T_guess)
+        if return_Tdust:
+            T, Tdust = sol
+            Ts.append(T)
+            Tds.append(Tdust)
+        else:
+            Ts.append(sol)
+    if return_Tdust:
+        return np.array(Ts), np.array(Tds)
+    else:
+        return np.array(Ts)
+
+    
