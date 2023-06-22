@@ -258,7 +258,6 @@ def equilibrium_temp(nH=1, NH=0, X_FUV=1,X_OPT=1, Z=1, z=0, divv=None, zeta_CR=2
         result = root_scalar(func, x0=np.log10(T_guess),x1=np.log10(T_guess2), method='secant',rtol=1e-3) #,rtol=1e-3,xtol=1e-4*T)
         if result.converged:
             T = 10**result.root; use_brentq = False
-            #print(T, T_guess, result.function_calls)
 
     if use_brentq: 
         try:
@@ -274,8 +273,6 @@ def equilibrium_temp(nH=1, NH=0, X_FUV=1,X_OPT=1, Z=1, z=0, divv=None, zeta_CR=2
         return T, Tdust
     else:
         return T
-
-#equilibrium_temp = np.vectorize(equilibrium_temp,excluded=["processes"])
 
 def equilibrium_temp_grid(nH, NH, X_FUV=1, X_OPT=1, Z=1, z=0, divv=None, zeta_CR=2e-16, Tdust=None,jeans_shielding=False,
     dust_beta=2.,dust_coupling=1,sigma_GMC=100., processes=all_processes,attenuate_cr=True,return_Tdust=False,

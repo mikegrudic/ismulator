@@ -39,7 +39,7 @@ st.set_page_config(page_title="ISMulator")
 col1,col2 = st.columns([0.75,0.25])
 
 NH2 = 10**st.sidebar.slider(r'Column density: $\log N_{\rm H}/\rm cm^{-2}$ at $n_{\rm H}=100\,\rm cm^{-3}$',min_value=19.,max_value=23., value=21.)
-Z = 10**st.sidebar.slider(r'Metallicity: $\log Z$',min_value=-4.,max_value=1., value=0.)
+Z = 10**st.sidebar.slider(r'Metallicity: $\log Z$',min_value=-7.,max_value=1., value=0.)
 z = st.sidebar.slider(r'Redshift: $z$',min_value=0.,max_value=20., value=0.)
 zeta_CR = 10**st.sidebar.slider(r'$\log \zeta_{\rm CR}$: Cosmic ray ionization rate ($s^{-1}$)',min_value=-18.,max_value=-10., value=-15.7)
 X_FUV = 10**st.sidebar.slider(r'$\log \chi_{\rm FUV}$: FUV radiation field strength',min_value=-2.,max_value=4.,value=0.)
