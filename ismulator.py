@@ -1,57 +1,38 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-#from matplotlib import pyplot as plt
 from ism_eqm_temp import *
-#from PIL import Image
-from time import sleep, time
-#import plotly.express as px
 import bokeh.plotting as bk
 from bokeh.models import Range1d
 
-#plt.clf()
-#plt.close()
 
-def make_plot_matplotlib(n,T,Tdust):
-    print("Plotting...")
-    plt.clf()
-    fig,ax = plt.subplots()
-    if jeans_mass:
-        MJ = 5 * (T/10)**1.5 * (n/1e4)**-0.5
-        ax.loglog(n,MJ,color='black')
-        ax.set(xlim=[nmin,nmax],ylim=[1e-4,1e6],xlabel=r"$n_{\rm H}\,\left(\rm cm^{-3}\right)$",ylabel=r"$M_{\rm J}\left(M_\odot\right)$")
-    else:
-        ax.loglog(n,T,label="Gas",color='black')
-        ax.loglog(n,Tdust,label="Dust",color='black',ls='dashed')
-        ax.legend(loc=1)
-        ax.set(xlim=[nmin,nmax],ylim=[Tmin,Tmax],xlabel=r"$n_{\rm H}\,\left(\rm cm^{-3}\right)$",ylabel=r"$T\left(\rm K\right)$")
-    #plt.savefig("fig%g.png"%time(),dpi=400,bbox_inches='tight')
-    print("Done plotting!")
-    #plt.close()
-    return fig
+def make_plot_bokeh(n,T,Tdust,x_var="Density", y_var="Temperature"):
 
-def make_plot_plotly(n,T,Tdust):
-    df = pd.DataFrame(dict(
-        n = n,
-        T = T,
-        Td = Tdust,
-    ))
-    labels = {"n": r"$n_{\rm H}\,\left(\rm cm^{-3}\right)$", "T": r"$T\left(\rm K\right)$"}
-    fig = px.line(df,x='n', y=df.columns[1:], labels=labels,log_x=True, log_y=True) 
-    return fig
+    labeldict = {"Density": r"$$n_{\rm H}\,\left(\rm cm^{-3}\right)$$",
+                 "Jeans Mass": r"$$M_{\rm J}\left(M_\odot\right)$$",
+                 "Temperature": r"$$T\left(\rm K\right)$$",
+                 "Pressure": r"$$P\left(k_{\rm B} \mathrm{K\,cm^{-3}}\right)$$"
+                }
 
-def make_plot_bokeh(n,T,Tdust):
-    if jeans_mass:
-        p = bk.figure(y_axis_type="log",x_axis_type="log",x_axis_label=r"$$n_{\rm H}\,\left(\rm cm^{-3}\right)$$",y_axis_label=r"$$M_{\rm J}\left(M_\odot\right)$$")
-        p.line(n,5*(T/10)**1.5*(n/1e4)**-0.5,color='black',line_width=2)
-        p.y_range=Range1d(1e-4,1e6)
-    else:
-        p = bk.figure(y_axis_type="log",x_axis_type="log",x_axis_label=r"$$n_{\rm H}\,\left(\rm cm^{-3}\right)$$",y_axis_label=r"$$T\left(\rm K\right)$$")
-        p.line(n,T,color='black',legend_label="Gas",line_width=2)
-        p.line(n,Tdust,color='black',line_dash='dashed',legend_label="Dust",line_width=2)
-        p.y_range=Range1d(Tmin,Tmax)
+    P = n/(2.3*0.7) * T
+    M_J = 5*(T/10)**1.5*(n/1e4)**-0.5
+    quantities = {"Density": n,
+                 "Jeans Mass": M_J,
+                 "Temperature": T,
+                 "Pressure": P
+                }
+    
+    X = quantities[x_var]
+    Y = quantities[y_var]
+    p = bk.figure(y_axis_type="log",x_axis_type="log",x_axis_label=labeldict[x_var],y_axis_label=labeldict[y_var])
 
-    p.x_range=Range1d(nmin,nmax)
+    p.line(X,Y,color='black',line_width=2,legend_label="Gas")#,legend_label=("Gas" if "Temp",line_width=2)
+
+    if x_var=="Temperature":
+        p.line(Tdust,Y,color='black',line_width=2,legend_label="Dust",line_dash='dashed')
+    elif y_var=="Temperature":
+        p.line(X,Tdust,color='black',line_width=2,legend_label="Dust",line_dash='dashed')
+
     return p
 
 st.set_page_config(page_title="ISMulator")
@@ -61,13 +42,16 @@ NH2 = 10**st.sidebar.slider(r'Column density: $\log N_{\rm H}/\rm cm^{-2}$ at $n
 Z = 10**st.sidebar.slider(r'Metallicity: $\log Z$',min_value=-4.,max_value=1., value=0.)
 z = st.sidebar.slider(r'Redshift: $z$',min_value=0.,max_value=20., value=0.)
 zeta_CR = 10**st.sidebar.slider(r'$\log \zeta_{\rm CR}$: Cosmic ray ionization rate ($s^{-1}$)',min_value=-18.,max_value=-10., value=-15.7)
-ISRF = 10**st.sidebar.slider(r'$\log \chi$: Interstellar radiation field strength vs. Solar',min_value=-2.,max_value=4.,value=0.)
+X_FUV = 10**st.sidebar.slider(r'$\log \chi_{\rm FUV}$: FUV radiation field strength',min_value=-2.,max_value=4.,value=0.)
+X_OPT = 10**st.sidebar.slider(r'$\log \chi_{\rm OPT}$: Optical-NIR radiation field strength',min_value=-2.,max_value=4.,value=0.)
 NH_alpha = st.sidebar.slider(r'Column density scaling: $\alpha$ where $N_{\rm H}=N_{\rm H,0}\left(n_{\rm H}/100\rm cm^{-3}\right)^{\alpha}$',min_value=0.,max_value=1., value=.3)
 fJ = st.sidebar.slider(r'$f_{\rm J}=l/\lambda_{\rm J}$: Ratio of shielding length floor to Jeans wavelength',min_value=0.,max_value=1.,value=0.25)
 dust_beta = st.sidebar.slider(r'$\beta$: Dust spectral index',min_value=1.,max_value=2.,value=2.)
+dust_coeff = 10**st.sidebar.slider(r'$\log \alpha_{\rm gd}$: dust-gas coupling coefficient',min_value=-4.,max_value=4.,value=0.)
 sigma_GMC = 10**st.sidebar.slider(r'$\log \Sigma_{\rm GMC}\left(M_\odot\rm pc^{-2}\right)$ for turb. dissipation',min_value=1.,max_value=5.,value=2.)
-attenuate_cr = col2.checkbox(r"Cosmic ray attenuation",value=True)
-jeans_mass = col2.checkbox(r"Plot Jeans mass",value=False)
+attenuate_cr = st.sidebar.checkbox(r"Cosmic ray attenuation",value=True)
+x_var = col2.radio("X axis", ["Density", "Pressure","Temperature"])
+y_var = col2.radio("Y axis", ["Temperature", "Jeans Mass","Pressure"])
 process_dict ={}
 for process in all_processes:
     process_dict[process] = col2.checkbox(process, value=True)
@@ -90,13 +74,14 @@ n = np.logspace(np.log10(nmin),np.log10(nmax),Ngrid)
 NH = NH2 * (n/1e2)**NH_alpha
 
 try:
-    T, Tdust = equilibrium_temp_grid(n,NH,jeans_shielding=fJ, Z=Z,z=z,ISRF=ISRF,zeta_CR=zeta_CR,                                                        
-    attenuate_cr=attenuate_cr,dust_beta=dust_beta,sigma_GMC=sigma_GMC,co_prescription=CO_Rx,cii_prescription=CI_Rx,processes=processes_to_use,return_Tdust=True)
+    T, Tdust = equilibrium_temp_grid(n,NH,jeans_shielding=fJ, Z=Z,z=z,X_FUV=X_FUV,X_OPT=X_OPT,zeta_CR=zeta_CR,                                                        
+    attenuate_cr=attenuate_cr,dust_beta=dust_beta,dust_coupling=dust_coeff,sigma_GMC=sigma_GMC,co_prescription=CO_Rx,
+    cii_prescription=CI_Rx,processes=processes_to_use,return_Tdust=True)
 except:
     st.write("Couldn't solve for temperature!")
     T=Tdust=np.zeros_like(n)
 
-col1.bokeh_chart(make_plot_bokeh(n,T,Tdust),use_container_width=True)
+col1.bokeh_chart(make_plot_bokeh(n,T,Tdust,x_var,y_var),use_container_width=True)
 "ISMulator solves for the equilibrium of gas and dust heating and cooling in interstellar clouds as a function of density."
 "Warning: results at >1000K are VERY approximate because solving ionization is deferred to Future Work ™️🙃"
 "Source code available at https://github.com/mikegrudic/ISMulator"
