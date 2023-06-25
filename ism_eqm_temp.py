@@ -133,7 +133,7 @@ def CO_cooling(nH=1, T=10, NH=0,Z=1,X_FUV=1,divv=None,xCO=None,simple=False,pres
 def CR_heating(zeta_CR=2e-16,NH=None):
     """Rate of cosmic ray heating in erg/s/H, just assuming 10eV per H ionization."""
     if NH is not None:
-        return 3e-27 * (zeta_CR / 2e-16)/(1+(NH/1e22))
+        return 3e-27 * (zeta_CR / 2e-16)/(1+(NH/1e21))
     else:
         return 3e-27 * (zeta_CR / 2e-16)
     
