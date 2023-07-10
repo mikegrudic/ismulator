@@ -191,7 +191,10 @@ def net_dust_heating(dT,nH,T,NH,Z=1,X_FUV=1,X_OPT=1,z=0, beta=2, absorption=-1,d
     sigma_IR_emission = sigma_IR_0 * Z * (min(Td,150)/10)**beta # dust cross section per H in cm^2
     lambdadust_thin = 2.268 * sigma_IR_emission * (Td/10)**4
     lambdadust_thick = 2.268 * (Td/10)**4 / (NH+1e-100)
-    psi_IR = 1/(1/lambdadust_thin + 1/lambdadust_thick) #interpolates the lower envelope of the optically-thin and -thick limits
+    p = 2.5 # how sharp the transition between optically thin and thick cooling is
+    psi_IR = (lambdadust_thin**-p + lambdadust_thick**-p)**-(1/p)
+     #1/(1/lambdadust_thin + 1/lambdadust_thick) #interpolates
+     #  the lower envelope of the optically-thin and -thick limits
     lambda_gd = dust_gas_cooling(nH,T,Td,Z,dust_coupling)
     
     if absorption < 0:
