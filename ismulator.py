@@ -8,10 +8,10 @@ from bokeh.models import Range1d
 
 def make_plot_bokeh(n,T,Tdust,x_var="Density", y_var="Temperature"):
 
-    labeldict = {"Density": r"$$n_{\rm H}\,\left(\rm cm^{-3}\right)$$",
-                 "Jeans Mass": r"$$M_{\rm J}\left(M_\odot\right)$$",
-                 "Temperature": r"$$T\left(\rm K\right)$$",
-                 "Pressure": r"$$P\left(k_{\rm B} \mathrm{K\,cm^{-3}}\right)$$"
+    labeldict = {"Density": "nH (cm^-3)", #r"$$n_{\rm H}\,\left(\rm cm^{-3}\right)$$",
+                 "Jeans Mass": "Jeans Mass (M☉)", ##r"$$M_{\rm J}\left(M_\odot\right)$$",
+                 "Temperature": "Temperature (K)", #r"$$T\left(\rm K\right)$$",
+                 "Pressure": "Pressure (kB K cm^-3)"#r"$$P\left(k_{\rm B} \mathrm{K\,cm^{-3}}\right)$$"
                 }
 
     P = n/(2.3*0.7) * T
