@@ -64,7 +64,7 @@ CI_Rx = st.sidebar.selectbox("Atomic cooling prescription", ["Hopkins 2022 (FIRE
 Tmin = 1
 Tmax = 1e4
 nmin = 10**st.sidebar.number_input(r"Min. $\log n_{\rm H}\left(\rm cm^{-3}\right)$",min_value=-2., max_value=20.,value=0.)
-nmax = 10**st.sidebar.number_input(r"Max. $\log n_{\rm H}\left(\rm cm^{-3}\right)$",min_value=0., max_value=20.,value=12.)
+nmax = 10**st.sidebar.number_input(r"Max. $\log n_{\rm H}\left(\rm cm^{-3}\right)$",min_value=0., max_value=20.,value=8.)
 Tmin = 10**st.sidebar.number_input(r"Min. $\log T\left(\rm K\right)$",min_value=0., max_value=8.,value=0.)
 Tmax = 10**st.sidebar.number_input(r"Max. $\log T\left(\rm K\right)$",min_value=0., max_value=7.,value=4.)
 Ngrid = st.sidebar.number_input(r"Number of $n_{\rm H}$ grid points",min_value=10, max_value=1000,value=100)
