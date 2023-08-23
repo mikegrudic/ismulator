@@ -1,4 +1,5 @@
-numpy<1.25
-bokeh<=2.4.3
-numba
 scipy
+numpy==1.24
+bokeh<=2.4.3
+numba==0.57.1 
+
