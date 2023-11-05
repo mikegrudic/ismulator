@@ -5,8 +5,69 @@ def grain_charge(nH):
     return max((5e3 / nH), 50)
 
 
-# def f_Cplus(nH=1, NH=1e21, T=10, X_FUV=1, Z=1):
-#    """Equilibrium fraction of C locked in CO, from Tielens 2005"""
+def cosmic_ray_ionization_rate(zeta_CR=2e-16, NH=1e21):
+    return zeta_CR / (1 + (NH / 1e21))
+
+
+def f_HII(nH=1, NH=1e21, T=10, zeta_CR=2e-16):
+    """Fraction of ionized H - assumes ONLY cosmic ray ionization and that all electrons are from H"""
+    zeta_CR_H = cosmic_ray_ionization_rate(zeta_CR, NH)
+    alpha_rr_H = (
+        2.753e-14 * (315614 / T) ** 1.5 * (1 + (115188 / T) ** 0.407) ** -2.242
+    )  # case B recombination coeff
+    frac = np.sqrt(zeta_CR_H / (alpha_rr_H * nH)).clip(0, 1)
+    return frac
+
+
+def f_Cplus(nH=1, NH=1e21, T=10, X_FUV=1, zeta_CR=2e-16, Z=1):
+    """Equilibrium fraction of C in C+, following Kim 2022, Gong 2017"""
+
+    # just account for dust shielding for now (C and H2 also important)
+    zeta_FUV = 3.43e-10 * X_FUV * np.exp(-1e-21 * NH * Z)
+    zeta_CR_H = cosmic_ray_ionization_rate(zeta_CR, NH)
+    fH2 = f_H2(nH, NH, X_FUV, Z)
+    zeta_H2_CR = 520 * 2 * fH2 * zeta_CR_H
+    zeta_CR_C = 3.85 * zeta_CR_H
+    psi = grain_charge(nH)
+
+    # rate coefficient for grain-assisted recombination
+    alpha_grain_C = (
+        45.58
+        * 1e-14
+        / (
+            1
+            + 6.089
+            * 1e-3
+            * psi**1.128
+            * (1 + 4.331 * T**0.04845)
+            * np.power(psi, -0.4956 - 5.494e-7 * np.log(T))
+        )
+    ) * Z
+
+    alpha = np.sqrt(T / 6.67e-3)
+    beta = np.sqrt(T / 1.943e6)
+    gamma = 0.7849 + 0.1597 * np.exp(-49550 / T)
+    # radiative recombination
+    k_rr = 2.995e-9 / (alpha * (1 + alpha) ** (1 - gamma) * (1 + beta) ** (1 + gamma))
+    # dielectronic recombination
+    k_dr = T**-1.5 * (
+        6.346e-9 * np.exp(-12.17 / T)
+        + 9.793e-9 * np.exp(-73.8 / T)
+        + 1.634e-6 * np.exp(-15230 / T)
+    )
+
+    # C+ + H_2 -> CH_2+
+    k_cplus_H2 = 2.31e-13 * T**-1.3 * np.exp(-23 / T)
+    zeta_total = zeta_FUV + zeta_H2_CR + zeta_CR_C
+    xe = 0  # electron abundance
+    cplus_fraction = zeta_total / (
+        zeta_total
+        + alpha_grain_C * nH
+        + k_cplus_H2 * 0.5 * fH2 * nH
+        + (k_rr + k_dr) * nH * xe
+    )
+
+    return cplus_fraction
 
 
 def f_CO(nH=1, NH=1e21, T=10, X_FUV=1, Z=1, prescription="Tielens 2005"):
