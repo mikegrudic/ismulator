@@ -1,3 +1,4 @@
+"""Functions for computing equilibrium ISM temperature"""
 from scipy.optimize import brentq, root_scalar
 from scipy.interpolate import interp1d
 from numba import njit
