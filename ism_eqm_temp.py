@@ -1,4 +1,5 @@
 """Functions for computing equilibrium ISM temperature"""
+
 from scipy.optimize import brentq, root_scalar
 from scipy.interpolate import interp1d
 from numba import njit
@@ -121,9 +122,8 @@ def equilibrium_temp(
     )  # solving vs logT converges a bit faster
 
     use_brentq = True
-    if (
-        T_guess is not None
-    ):  # we have an initial guess that is supposed to be close (e.g. previous grid point)
+    if T_guess is not None:
+        # we have an initial guess that is supposed to be close (e.g. previous grid point)
         T_guess2 = T_guess * 1.01
         result = root_scalar(
             func,
@@ -146,6 +146,9 @@ def equilibrium_temp(
                 raise ("Couldn't solve for temperature! Try some other parameters.")
 
     if return_Tdust:
+        if jeans_shielding:
+            lambda_jeans = 8.1e19 * nH**-0.5 * (T / 10) ** 0.5
+            NH = np.max([nH * lambda_jeans * jeans_shielding, NH], axis=0)
         Tdust = dust.dust_temperature(
             nH,
             T,

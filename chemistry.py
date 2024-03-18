@@ -10,7 +10,7 @@ def cosmic_ray_ionization_rate(zeta_CR=2e-16, NH=1e21):
 
 
 def f_HII(nH=1, NH=1e21, T=10, zeta_CR=2e-16):
-    """Fraction of ionized H - assumes ONLY cosmic ray ionization and that all electrons are from H"""
+    """Fraction of ionized H - assumes ONLY cosmic ray ionization, all electrons are from H, and ionization is small"""
     zeta_CR_H = cosmic_ray_ionization_rate(zeta_CR, NH)
     alpha_rr_H = (
         2.753e-14 * (315614 / T) ** 1.5 * (1 + (115188 / T) ** 0.407) ** -2.242
