@@ -28,9 +28,7 @@ def make_plot_bokeh(n, T, Tdust, x_var="Density", y_var="Temperature"):
         y_axis_label=labeldict[y_var],
     )
 
-    p.line(
-        X, Y, color="black", line_width=2, legend_label="Gas"
-    )  # ,legend_label=("Gas" if "Temp",line_width=2)
+    p.line(X, Y, color="black", line_width=2, legend_label="Gas")  # ,legend_label=("Gas" if "Temp",line_width=2)
 
     if x_var == "Temperature":
         p.line(
@@ -63,9 +61,7 @@ NH2 = 10 ** st.sidebar.slider(
     max_value=23.0,
     value=21.0,
 )
-Z = 10 ** st.sidebar.slider(
-    r"Metallicity: $\log Z$", min_value=-7.0, max_value=1.0, value=0.0
-)
+Z = 10 ** st.sidebar.slider(r"Metallicity: $\log Z$", min_value=-4.0, max_value=1.0, value=0.0)
 z = st.sidebar.slider(r"Redshift: $z$", min_value=0.0, max_value=20.0, value=0.0)
 zeta_CR = 10 ** st.sidebar.slider(
     r"$\log \zeta_{\rm CR}$: Cosmic ray ionization rate ($s^{-1}$)",
@@ -97,9 +93,7 @@ fJ = st.sidebar.slider(
     max_value=1.0,
     value=0.25,
 )
-dust_beta = st.sidebar.slider(
-    r"$\beta$: Dust spectral index", min_value=1.0, max_value=2.0, value=2.0
-)
+dust_beta = st.sidebar.slider(r"$\beta$: Dust spectral index", min_value=1.0, max_value=2.0, value=2.0)
 dust_coeff = 10 ** st.sidebar.slider(
     r"$\log \alpha_{\rm gd}$: dust-gas coupling coefficient",
     min_value=-4.0,
@@ -120,12 +114,8 @@ for process in all_processes:
     process_dict[process] = col2.checkbox(process, value=True)
 processes_to_use = [p if process_dict[p] else "" for p in process_dict.keys()]
 
-CO_Rx = st.sidebar.selectbox(
-    "CO cooling prescription", ["Whitworth 2018", "Gong 2017", "Hopkins 2022 (FIRE-3)"]
-)
-CI_Rx = st.sidebar.selectbox(
-    "Atomic cooling prescription", ["Hopkins 2022 (FIRE-3)", "Simple"]
-)
+CO_Rx = st.sidebar.selectbox("CO cooling prescription", ["Whitworth 2018", "Gong 2017", "Hopkins 2022 (FIRE-3)"])
+CI_Rx = st.sidebar.selectbox("Atomic cooling prescription", ["Hopkins 2022 (FIRE-3)", "Simple"])
 
 # sliders for plot limits
 Tmin = 1
@@ -142,15 +132,9 @@ nmax = 10 ** st.sidebar.number_input(
     max_value=20.0,
     value=8.0,
 )
-Tmin = 10 ** st.sidebar.number_input(
-    r"Min. $\log T\left(\rm K\right)$", min_value=0.0, max_value=8.0, value=0.0
-)
-Tmax = 10 ** st.sidebar.number_input(
-    r"Max. $\log T\left(\rm K\right)$", min_value=0.0, max_value=7.0, value=4.0
-)
-Ngrid = st.sidebar.number_input(
-    r"Number of $n_{\rm H}$ grid points", min_value=10, max_value=1000, value=100
-)
+Tmin = 10 ** st.sidebar.number_input(r"Min. $\log T\left(\rm K\right)$", min_value=0.0, max_value=8.0, value=0.0)
+Tmax = 10 ** st.sidebar.number_input(r"Max. $\log T\left(\rm K\right)$", min_value=0.0, max_value=7.0, value=4.0)
+Ngrid = st.sidebar.number_input(r"Number of $n_{\rm H}$ grid points", min_value=10, max_value=1000, value=100)
 
 
 n = np.logspace(np.log10(nmin), np.log10(nmax), Ngrid)

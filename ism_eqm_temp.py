@@ -56,13 +56,9 @@ def net_heating(
         if process == "Photoelectric":
             rate += coolingrates.photoelectric_heating(X_FUV, nH, T, NH, Z)
         if process == "CII Cooling":
-            rate -= coolingrates.CII_cooling(
-                nH, Z, T, NH, X_FUV, prescription=cii_prescription
-            )
+            rate -= coolingrates.CII_cooling(nH, Z, T, NH, X_FUV, prescription=cii_prescription)
         if process == "CO Cooling":
-            rate -= coolingrates.CO_cooling(
-                nH, T, NH, Z, X_FUV, divv, prescription=co_prescription
-            )
+            rate -= coolingrates.CO_cooling(nH, T, NH, Z, X_FUV, divv, prescription=co_prescription)
         if process == "Dust-Gas Coupling":
             rate += coolingrates.dust_gas_cooling(nH, T, Tdust, Z, dust_coupling)
         if process == "H_2 Cooling":
@@ -117,9 +113,7 @@ def equilibrium_temp(
         co_prescription,
         cii_prescription,
     )
-    func = lambda logT: net_heating(
-        10**logT, *params
-    )  # solving vs logT converges a bit faster
+    func = lambda logT: net_heating(10**logT, *params)  # solving vs logT converges a bit faster
 
     use_brentq = True
     if T_guess is not None:
@@ -212,15 +206,11 @@ def equilibrium_temp_grid(
         if i == 1:
             T_guess = Ts[-1]
         elif i > 1:
-            T_guess = 10 ** interp1d(
-                np.log10(nH[:i]), np.log10(Ts), fill_value="extrapolate"
-            )(
+            T_guess = 10 ** interp1d(np.log10(nH[:i]), np.log10(Ts), fill_value="extrapolate")(
                 np.log10(nH[i])
             )  # guess using linear extrapolation in log space
 
-        sol = equilibrium_temp(
-            nH[i], NH[i], *params, return_Tdust=return_Tdust, T_guess=T_guess
-        )
+        sol = equilibrium_temp(nH[i], NH[i], *params, return_Tdust=return_Tdust, T_guess=T_guess)
         if return_Tdust:
             T, Tdust = sol
             Ts.append(T)

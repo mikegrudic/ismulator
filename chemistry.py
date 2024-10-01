@@ -12,9 +12,7 @@ def cosmic_ray_ionization_rate(zeta_CR=2e-16, NH=1e21):
 def f_HII(nH=1, NH=1e21, T=10, zeta_CR=2e-16):
     """Fraction of ionized H - assumes ONLY cosmic ray ionization, all electrons are from H, and ionization is small"""
     zeta_CR_H = cosmic_ray_ionization_rate(zeta_CR, NH)
-    alpha_rr_H = (
-        2.753e-14 * (315614 / T) ** 1.5 * (1 + (115188 / T) ** 0.407) ** -2.242
-    )  # case B recombination coeff
+    alpha_rr_H = 2.753e-14 * (315614 / T) ** 1.5 * (1 + (115188 / T) ** 0.407) ** -2.242  # case B recombination coeff
     frac = np.sqrt(zeta_CR_H / (alpha_rr_H * nH)).clip(0, 1)
     return frac
 
@@ -34,14 +32,7 @@ def f_Cplus(nH=1, NH=1e21, T=10, X_FUV=1, zeta_CR=2e-16, Z=1):
     alpha_grain_C = (
         45.58
         * 1e-14
-        / (
-            1
-            + 6.089
-            * 1e-3
-            * psi**1.128
-            * (1 + 4.331 * T**0.04845)
-            * np.power(psi, -0.4956 - 5.494e-7 * np.log(T))
-        )
+        / (1 + 6.089 * 1e-3 * psi**1.128 * (1 + 4.331 * T**0.04845) * np.power(psi, -0.4956 - 5.494e-7 * np.log(T)))
     ) * Z
 
     alpha = np.sqrt(T / 6.67e-3)
@@ -50,21 +41,14 @@ def f_Cplus(nH=1, NH=1e21, T=10, X_FUV=1, zeta_CR=2e-16, Z=1):
     # radiative recombination
     k_rr = 2.995e-9 / (alpha * (1 + alpha) ** (1 - gamma) * (1 + beta) ** (1 + gamma))
     # dielectronic recombination
-    k_dr = T**-1.5 * (
-        6.346e-9 * np.exp(-12.17 / T)
-        + 9.793e-9 * np.exp(-73.8 / T)
-        + 1.634e-6 * np.exp(-15230 / T)
-    )
+    k_dr = T**-1.5 * (6.346e-9 * np.exp(-12.17 / T) + 9.793e-9 * np.exp(-73.8 / T) + 1.634e-6 * np.exp(-15230 / T))
 
     # C+ + H_2 -> CH_2+
     k_cplus_H2 = 2.31e-13 * T**-1.3 * np.exp(-23 / T)
     zeta_total = zeta_FUV + zeta_H2_CR + zeta_CR_C
     xe = 0  # electron abundance
     cplus_fraction = zeta_total / (
-        zeta_total
-        + alpha_grain_C * nH
-        + k_cplus_H2 * 0.5 * fH2 * nH
-        + (k_rr + k_dr) * nH * xe
+        zeta_total + alpha_grain_C * nH + k_cplus_H2 * 0.5 * fH2 * nH + (k_rr + k_dr) * nH * xe
     )
 
     return cplus_fraction

@@ -20,9 +20,7 @@ def gas_dust_heating_coeff(T, Z, dust_coupling):
     return 1.1e-32 * dust_coupling * Z * np.sqrt(T) * (1 - 0.8 * np.exp(-75 / T))
 
 
-def dust_temperature(
-    nH=1, T=10, Z=1, NH=0, X_FUV=1, X_OPT=1, z=0, beta=2, dust_coupling=1
-):
+def dust_temperature(nH=1, T=10, Z=1, NH=0, X_FUV=1, X_OPT=1, z=0, beta=2, dust_coupling=1):
     """
     Equilibrium dust temperature obtained by solving the dust energy balance equation accounting for absorption, emission, and gas-dust heat transfer.
     """
@@ -49,24 +47,18 @@ def dust_temperature(
     )  # ,rtol=1e-3,xtol=1e-4*T)
     Tdust = T + result.root
     if not result.converged:
-        func = lambda logT: net_dust_heating(
-            10**logT - T, nH, T, NH, Z, X_FUV, X_OPT, z, beta, abs, dust_coupling
-        )
+        func = lambda logT: net_dust_heating(10**logT - T, nH, T, NH, Z, X_FUV, X_OPT, z, beta, abs, dust_coupling)
         result = root_scalar(func, bracket=[-1, 8], method="brentq")
         Tdust = 10**result.root
     return Tdust
 
 
 @njit(fastmath=True, error_model="numpy")
-def net_dust_heating(
-    dT, nH, T, NH, Z=1, X_FUV=1, X_OPT=1, z=0, beta=2, absorption=-1, dust_coupling=1
-):
+def net_dust_heating(dT, nH, T, NH, Z=1, X_FUV=1, X_OPT=1, z=0, beta=2, absorption=-1, dust_coupling=1):
     """Derivative of the dust energy in the dust energy equation, solve this = 0 to get the equilibrium dust temperature."""
     Td = T + dT
     sigma_IR_0 = 2e-25
-    sigma_IR_emission = (
-        sigma_IR_0 * Z * (min(Td, 150) / 10) ** beta
-    )  # dust cross section per H in cm^2
+    sigma_IR_emission = sigma_IR_0 * Z * (min(Td, 150) / 10) ** beta  # dust cross section per H in cm^2
     lambdadust_thin = 2.268 * sigma_IR_emission * (Td / 10) ** 4
     lambdadust_thick = 2.268 * (Td / 10) ** 4 / (NH + 1e-100)
     p = 2.5  # how sharp the transition between optically thin and thick cooling is
@@ -105,11 +97,7 @@ def dust_absorption_rate(NH, Z=1, X_FUV=1, X_OPT=1, z=0, beta=2):
     gamma_IR = (
         2.268 * sigma_IR_CMB * (T_CMB / 10) ** 4
         + 0.048
-        * (
-            X_IR_eV_cm3
-            + X_OPT_eV_cm3 * (-np.expm1(-tau_OPT))
-            + X_FUV_eV_cm3 * (-np.expm1(-tau_UV))
-        )
+        * (X_IR_eV_cm3 + X_OPT_eV_cm3 * (-np.expm1(-tau_OPT)) + X_FUV_eV_cm3 * (-np.expm1(-tau_UV)))
         * sigma_IR_ISRF
     )
     return gamma_IR + gamma_UV + gamma_OPT

@@ -62,13 +62,7 @@ def lyman_cooling(nH=1, T=1000):
 def atomic_cooling_fire3(nH, NH, T, Z, X_FUV):
     """Cooling due to atomic and ionized C. Uses Hopkins 2022 FIRE-3 prescription. Rate per H nucleus in erg/s."""
     f = chemistry.f_CO(nH, NH, T, X_FUV, Z)
-    return (
-        1e-27
-        * (0.47 * T**0.15 * np.exp(-91 / T) + 0.0208 * np.exp(-23.6 / T))
-        * (1 - f)
-        * nH
-        * Z
-    )
+    return 1e-27 * (0.47 * T**0.15 * np.exp(-91 / T) + 0.0208 * np.exp(-23.6 / T)) * (1 - f) * nH * Z
 
 
 def get_tabulated_CO_coolingrate(T, NH, nH2):
@@ -79,12 +73,8 @@ def get_tabulated_CO_coolingrate(T, NH, nH2):
     T_CO_table = np.log10(table[0, 1:])
     NH_table = table[1:, 0]
     alpha_table = table[1:, 1:].T
-    LLTE_table = np.loadtxt("coolingtables/omukai_2010_CO_cooling_LLTE_table.dat")[
-        1:, 1:
-    ].T
-    n12_table = np.loadtxt("coolingtables/omukai_2010_CO_cooling_n12_table.dat")[
-        1:, 1:
-    ].T
+    LLTE_table = np.loadtxt("coolingtables/omukai_2010_CO_cooling_LLTE_table.dat")[1:, 1:].T
+    n12_table = np.loadtxt("coolingtables/omukai_2010_CO_cooling_n12_table.dat")[1:, 1:].T
     alpha = interpn(
         (T_CO_table, NH_table),
         alpha_table,
@@ -111,9 +101,7 @@ def get_tabulated_CO_coolingrate(T, NH, nH2):
         T_CO_table,
         [24.77, 24.38, 24.21, 24.03, 23.89, 23.82, 23.42, 23.13, 22.91, 22.63, 22.28],
     )
-    LM = (
-        L0**-1 + nH2 / LLTE + (1 / L0) * (nH2 / n12) ** alpha * (1 - n12 * L0 / LLTE)
-    ) ** -1
+    LM = (L0**-1 + nH2 / LLTE + (1 / L0) * (nH2 / n12) ** alpha * (1 - n12 * L0 / LLTE)) ** -1
     return LM
 
 
@@ -155,13 +143,7 @@ def CO_cooling(
     elif prescription == "Hopkins 2022 (FIRE-3)":
         sigma_crit_CO = 1.3e19 * T / Z
         ncrit_CO = 1.9e4 * T**0.5
-        return (
-            2.7e-31
-            * T**1.5
-            * (xCO / 3e-4)
-            * nH
-            / (1 + (nH / ncrit_CO) * (1 + NH / sigma_crit_CO))
-        )  # lambda_CO_HI)
+        return 2.7e-31 * T**1.5 * (xCO / 3e-4) * nH / (1 + (nH / ncrit_CO) * (1 + NH / sigma_crit_CO))  # lambda_CO_HI)
     elif prescription == "Whitworth 2018":
         lambda_CO_LO = 5e-27 * (xCO / 3e-4) * (T / 10) ** 1.5 * (nH / 1e3)
         lambda_CO_HI = 2e-26 * divv * (nH / 1e2) ** -1 * (T / 10) ** 4
@@ -169,9 +151,7 @@ def CO_cooling(
         if simple:
             return np.min([lambda_CO_LO, lambda_CO_HI], axis=0)
         else:
-            return (lambda_CO_LO ** (-1 / beta) + lambda_CO_HI ** (-1 / beta)) ** (
-                -beta
-            )
+            return (lambda_CO_LO ** (-1 / beta) + lambda_CO_HI ** (-1 / beta)) ** (-beta)
 
 
 def CR_heating(zeta_CR=2e-16, NH=None):
@@ -200,10 +180,7 @@ def H2_cooling(nH, NH, T, X_FUV, Z):
         6.7e-19 * np.exp(-min(5.86 / T3, EXPmax))
         + 1.6e-18 * np.exp(-min(11.7 / T3, EXPmax))
         + 3.0e-24 * np.exp(-min(0.51 / T3, EXPmax))
-        + 9.5e-22
-        * pow(T3, 3.76)
-        * np.exp(-min(0.0022 / (T3 * T3 * T3), EXPmax))
-        / (1.0 + 0.12 * pow(T3, 2.1))
+        + 9.5e-22 * pow(T3, 3.76) * np.exp(-min(0.0022 / (T3 * T3 * T3), EXPmax)) / (1.0 + 0.12 * pow(T3, 2.1))
     ) / nH
     #  super-critical H2-H cooling rate [per H2 molecule]
     Lambda_HD_thin = (
@@ -266,8 +243,6 @@ def H2_cooling(nH, NH, T, X_FUV, Z):
     f_HD = min(0.00126 * f_molec, 4.0e-5 * nH)
 
     nH_over_ncrit = Lambda_H2_thin / Lambda_H2_thick
-    Lambda_HD = (
-        f_HD * Lambda_HD_thin / (1.0 + f_HD / (f_molec + 1e-10) * nH_over_ncrit) * nH
-    )
+    Lambda_HD = f_HD * Lambda_HD_thin / (1.0 + f_HD / (f_molec + 1e-10) * nH_over_ncrit) * nH
     Lambda_H2 = f_molec * Lambda_H2_thin / (1.0 + nH_over_ncrit) * nH
     return Lambda_H2 + Lambda_HD
