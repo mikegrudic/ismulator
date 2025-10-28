@@ -5,6 +5,7 @@ from ism_eqm_temp import *
 from coolingrates import cooling_processes as all_processes
 import bokeh.plotting as bk
 from bokeh.models import Range1d
+from streamlit_bokeh import streamlit_bokeh
 
 
 def make_plot_bokeh(n, T, Tdust, x_var="Density", y_var="Temperature"):
@@ -163,7 +164,7 @@ except:
     st.write("Couldn't solve for temperature!")
     T = Tdust = np.zeros_like(n)
 
-col1.bokeh_chart(make_plot_bokeh(n, T, Tdust, x_var, y_var), use_container_width=True)
+col1.bokeh_chart(streamlit_bokeh(make_plot_bokeh(n, T, Tdust, x_var, y_var), use_container_width=True))
 "ISMulator solves for the equilibrium of gas and dust heating and cooling in interstellar clouds as a function of density."
 "Warning: results at >1000K are VERY approximate because solving ionization is deferred to Future Work ™️🙃"
 "Source code available at https://github.com/mikegrudic/ISMulator"
