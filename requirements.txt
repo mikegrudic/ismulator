@@ -1,6 +1,6 @@
 streamlit
 scipy
 numpy==1.26.4
-bokeh=3.8.0 #<=2.4.3
+bokeh==3.8.0 #<=2.4.3
 numba
 streamlit_bokeh==3.8.0
