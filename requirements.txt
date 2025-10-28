@@ -3,4 +3,4 @@ scipy
 numpy==1.26.4
 bokeh==3.4.3 #<=2.4.3
 numba
-streamlit_bokeh==3.4.3
+streamlit_bokeh
